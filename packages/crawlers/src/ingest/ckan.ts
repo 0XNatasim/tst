@@ -30,6 +30,16 @@ export async function listResources(datasetId: string): Promise<CkanResource[]> 
   return [...pkg.resources].sort((a, b) => time(b) - time(a))
 }
 
+/** Search datasets by keyword. Returns slug + title for the top matches,
+ * so we can discover the right dataset name to configure. */
+export async function searchDatasets(query: string, rows = 10) {
+  const result = await ckan<{ count: number; results: { name: string; title: string }[] }>(
+    "package_search",
+    { q: query, rows },
+  )
+  return result.results.map((r) => ({ slug: r.name, title: r.title }))
+}
+
 function time(r: CkanResource): number {
   return new Date(r.last_modified ?? r.created ?? 0).getTime()
 }
