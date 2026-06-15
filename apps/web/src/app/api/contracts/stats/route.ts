@@ -4,11 +4,21 @@ import { contracts } from "@openquebec/db"
 import { sql } from "drizzle-orm"
 
 export async function GET() {
-  const result = (await getDb()).select({
-    total: sql<number>`count(*)`,
-    totalAmount: sql<number>`sum(amount)`,
-    avgAmount: sql<number>`avg(amount)`,
-    soleSourceCount: sql<number>`sum(case when is_sole_source then 1 else 0 end)`,
-  }).from(contracts)
-  return NextResponse.json(result[0])
+  const db = await getDb()
+
+  const result = await db
+    .select({
+      total: sql<number>`count(*)`,
+      totalAmount: sql<number>`coalesce(sum(${contracts.amount}), 0)`,
+      avgAmount: sql<number>`coalesce(avg(${contracts.amount}), 0)`,
+      soleSourceCount: sql<number>`sum(case when ${contracts.isSoleSource} then 1 else 0 end)`,
+    })
+    .from(contracts)
+
+  return NextResponse.json(result[0] ?? {
+    total: 0,
+    totalAmount: 0,
+    avgAmount: 0,
+    soleSourceCount: 0,
+  })
 }
