@@ -1,7 +1,4 @@
 {
-  "rootDirectory": "apps/web",
-  "installCommand": "cd ../.. && pnpm install",
-  "buildCommand": "pnpm build",
   "framework": "nextjs",
   "crons": [
     {

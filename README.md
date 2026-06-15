@@ -17,6 +17,7 @@ Suivez chaque dollar public, de la collecte jusqu'au bénéficiaire final.
 ### 2. Lier à Vercel
 
 - Va sur [vercel.com/new](https://vercel.com/new) → Importe ce dépôt GitHub
+- **Project Settings → Root Directory** : mets `apps/web`
 - Dans **Environment Variables**, ajoute :
 
 | Variable | Valeur |
