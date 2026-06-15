@@ -1,0 +1,28 @@
+{
+  "name": "@openquebec/crawlers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "crawl:budget": "tsx src/crawlers/budget-crawler.ts",
+    "crawl:seao": "tsx src/crawlers/seao-crawler.ts",
+    "crawl:public-accounts": "tsx src/crawlers/public-accounts-crawler.ts",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openquebec/db": "workspace:*",
+    "playwright": "^1.50.0",
+    "pdf-parse": "^1.1.1",
+    "cheerio": "^1.0.0",
+    "csv-parse": "^5.6.0",
+    "xlsx": "^0.18.5",
+    "date-fns": "^4.1.0",
+    "p-limit": "^6.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0"
+  }
+}
