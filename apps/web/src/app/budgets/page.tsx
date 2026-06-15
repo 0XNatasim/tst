@@ -13,6 +13,10 @@ interface BudgetItem {
   variancePct: number
 }
 
+function formatCAD(n: number): string {
+  return new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(n)
+}
+
 export default function BudgetsPage() {
   const [data, setData] = useState<BudgetItem[]>([])
   const [fiscalYear, setFiscalYear] = useState("2026-2027")
@@ -32,14 +36,19 @@ export default function BudgetsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900">Analyse budgétaire</h1>
-      <p className="mt-1 text-sm text-slate-500">Comparaison des budgets prévus vs dépenses réelles par ministère.</p>
+      <h1 className="section-header" style={{ fontFamily: "var(--font-fraunces)" }}>
+        Analyse budgétaire
+      </h1>
+      <p className="mt-2 font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+        Budgets prévus vs dépenses réelles par ministère.
+      </p>
+      <div className="divider-retro mt-4" />
 
-      <div className="mt-4">
+      <div className="mt-6">
         <select
           value={fiscalYear}
           onChange={(e) => setFiscalYear(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="select-retro px-3 py-2"
         >
           <option value="2026-2027">2026-2027</option>
           <option value="2025-2026">2025-2026</option>
@@ -47,38 +56,60 @@ export default function BudgetsPage() {
         </select>
       </div>
 
-      <div className="mt-6 h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Bar dataKey="Prévu" fill="#3b5bdb" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Réel" fill="#22c55e" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="card-3d mt-6 p-4">
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#d4c5b2" strokeOpacity={0.4} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontFamily: "var(--font-mono)", fontSize: 11, fill: "#7a6f65" }}
+                axisLine={{ stroke: "#d4c5b2", strokeOpacity: 0.5 }}
+              />
+              <YAxis
+                tick={{ fontFamily: "var(--font-mono)", fontSize: 11, fill: "#7a6f65" }}
+                axisLine={{ stroke: "#d4c5b2", strokeOpacity: 0.5 }}
+                tickFormatter={(v) => `${v}G$`}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "#fdfaf5",
+                  border: "1px solid #d4c5b2",
+                  borderRadius: 0,
+                  boxShadow: "4px 4px 0 rgba(0,0,0,0.06)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.75rem",
+                }}
+              />
+              <Bar dataKey="Prévu" fill="#2b4c7a" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="Réel" fill="#2d6a4f" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      <div className="mt-6 space-y-2">
+      <div className="mt-8 space-y-3">
         {data.map((d) => {
           const variance = Number(d.variance)
           return (
-            <div key={d.id} className="rounded-lg border bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
+            <div key={d.id} className="card-3d p-5">
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Ministère {d.ministryId?.slice(0, 8)}</p>
-                  <p className="text-xs text-slate-500">{d.fiscalYear}</p>
+                  <p className="font-serif text-base font-bold text-ink"
+                    style={{ fontFamily: "var(--font-fraunces)" }}>
+                    Ministère {d.ministryId?.slice(0, 8)}
+                  </p>
+                  <p className="mt-0.5 font-mono text-[0.625rem] uppercase tracking-wider text-ink-faint">
+                    {d.fiscalYear}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-slate-600">
-                    Prévu: {new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(Number(d.planned))}
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Réel: {new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(Number(d.actual))}
-                  </p>
-                  <p className={`text-sm font-medium ${variance > 0 ? "text-red-600" : "text-green-600"}`}>
-                    {variance > 0 ? "+" : ""}{new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(variance)}
+                  <p className="ink-label">Prévu</p>
+                  <p className="ink-value text-sm">{formatCAD(Number(d.planned))}</p>
+                  <p className="ink-label mt-1">Réel</p>
+                  <p className="ink-value text-sm">{formatCAD(Number(d.actual))}</p>
+                  <p className={`ink-value mt-1 text-sm ${variance > 0 ? "text-accent" : "text-pine"}`}>
+                    {variance > 0 ? "+" : ""}{formatCAD(variance)}
                   </p>
                 </div>
               </div>

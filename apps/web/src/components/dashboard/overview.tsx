@@ -20,7 +20,9 @@ export function DashboardOverview({ data }: { data: DashboardData | null }) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="animate-pulse rounded-lg border bg-white p-4 h-24" />
+          <div key={i} className="card-3d h-24 animate-pulse p-4">
+            <div className="h-full w-full rounded bg-border/30" />
+          </div>
         ))}
       </div>
     )
@@ -30,12 +32,16 @@ export function DashboardOverview({ data }: { data: DashboardData | null }) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      <MetricCard label="Budget total prévu" value={formatB(data.totalBudgetPlanned)} />
+      <MetricCard label="Budget prévu" value={formatB(data.totalBudgetPlanned)} />
       <MetricCard label="Dépenses réelles" value={formatB(data.totalBudgetActual)} />
-      <MetricCard label="Écart budgétaire" value={formatB(deficit)} color={deficit > 0 ? "red" : "green"} />
-      <MetricCard label="Nombre de ministères" value={data.totalMinistries.toString()} />
+      <MetricCard
+        label="Écart budgétaire"
+        value={formatB(deficit)}
+        accent={deficit > 0 ? "accent" : "pine"}
+      />
+      <MetricCard label="Ministères" value={data.totalMinistries.toString()} />
       <MetricCard label="Fournisseurs" value={data.totalVendors.toString()} />
-      <MetricCard label="Valeur totale contrats" value={formatB(data.totalContractValue)} />
+      <MetricCard label="Valeur contrats" value={formatB(data.totalContractValue)} />
     </div>
   )
 }
@@ -43,18 +49,21 @@ export function DashboardOverview({ data }: { data: DashboardData | null }) {
 function MetricCard({
   label,
   value,
-  color,
+  accent,
 }: {
   label: string
   value: string
-  color?: "red" | "green"
+  accent?: "accent" | "pine"
 }) {
   return (
-    <div className="rounded-lg border bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
-      <p className={`mt-1 text-xl font-bold ${
-        color === "red" ? "text-red-600" : color === "green" ? "text-green-600" : "text-slate-900"
-      }`}>
+    <div className="card-3d p-4">
+      <p className="ink-label">{label}</p>
+      <p
+        className={`mt-1.5 text-2xl font-bold tracking-tight ${
+          accent === "accent" ? "text-accent" : accent === "pine" ? "text-pine" : "text-ink"
+        }`}
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
         {value}
       </p>
     </div>

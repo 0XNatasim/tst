@@ -22,33 +22,36 @@ export default function Home() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Tableau de bord des finances publiques du Québec</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Suivez chaque dollar public, de la collecte au bénéficiaire final.
+      <div className="mb-8">
+        <h1 className="section-header" style={{ fontFamily: "var(--font-fraunces)" }}>
+          Finances publiques du Québec
+        </h1>
+        <p className="mt-2 font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+          Suivi citoyen — chaque dollar public, de la collecte au bénéficiaire final.
         </p>
+        <div className="divider-retro mt-4" />
       </div>
 
       <DashboardOverview data={data} />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-10 grid gap-5 lg:grid-cols-3">
         <QuickActionCard
-          title="Explorateur de dépenses"
+          title="Explorateur"
           description="Recherchez et parcourez toutes les dépenses publiques"
           href="/explorer"
-          icon="search"
+          index={0}
         />
         <QuickActionCard
-          title="Contrats gouvernementaux"
+          title="Contrats"
           description="Consultez les contrats, fournisseurs et appels d'offres"
           href="/contrats"
-          icon="file"
+          index={1}
         />
         <QuickActionCard
-          title="Analyse budgétaire"
+          title="Budgets"
           description="Comparez les budgets aux dépenses réelles par ministère"
           href="/budgets"
-          icon="chart"
+          index={2}
         />
       </div>
     </div>
@@ -59,20 +62,30 @@ function QuickActionCard({
   title,
   description,
   href,
-  icon,
+  index,
 }: {
   title: string
   description: string
   href: string
-  icon: string
+  index: number
 }) {
+  const icons = ["◈", "◇", "◆"]
   return (
     <a
       href={href}
-      className="group rounded-lg border bg-white p-6 shadow-sm transition hover:shadow-md hover:border-navy-300"
+      className="card-3d group block p-6"
     >
-      <h3 className="font-semibold text-slate-900 group-hover:text-navy-700">{title}</h3>
-      <p className="mt-2 text-sm text-slate-500">{description}</p>
+      <span className="inline-flex items-center justify-center w-9 h-9 mb-3 border border-border bg-paper text-accent text-sm"
+        style={{ fontFamily: "var(--font-serif)", boxShadow: "2px 2px 0 #d4c5b2" }}>
+        {icons[index]}
+      </span>
+      <h3 className="font-serif text-lg font-bold tracking-tight text-ink group-hover:text-accent transition-colors"
+        style={{ fontFamily: "var(--font-fraunces)" }}>
+        {title}
+      </h3>
+      <p className="mt-1.5 font-mono text-[0.6875rem] leading-relaxed text-ink-muted">
+        {description}
+      </p>
     </a>
   )
 }

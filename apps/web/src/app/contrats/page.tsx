@@ -11,55 +11,81 @@ interface Contract {
   bidCount: number
 }
 
+function formatCAD(n: number): string {
+  return new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(n)
+}
+
 export default function ContractsPage() {
   const [contracts, setContracts] = useState<Contract[]>([])
   const [view, setView] = useState<"all" | "top" | "sole">("top")
 
   useEffect(() => {
-    const endpoint = view === "sole" ? "/api/contracts/sole-source" : "/api/contracts/top"
+    const endpoint = view === "sole" ? "/api/contracts/sole-source" : view === "top" ? "/api/contracts/top" : "/api/contracts"
     fetch(endpoint)
       .then((r) => r.json())
       .then(setContracts)
       .catch(() => {})
   }, [view])
 
+  const tabs = [
+    { key: "top" as const, label: "Plus importants" },
+    { key: "all" as const, label: "Tous" },
+    { key: "sole" as const, label: "Source unique" },
+  ]
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900">Contrats gouvernementaux</h1>
-      <p className="mt-1 text-sm text-slate-500">Contrats publics du Québec — montants, fournisseurs et modes d'attribution.</p>
+      <h1 className="section-header" style={{ fontFamily: "var(--font-fraunces)" }}>
+        Contrats gouvernementaux
+      </h1>
+      <p className="mt-2 font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+        Contrats publics du Québec — montants, fournisseurs et modes d&apos;attribution.
+      </p>
+      <div className="divider-retro mt-4" />
 
-      <div className="mt-4 flex gap-2">
-        {(["top", "all", "sole"] as const).map((v) => (
+      <div className="mt-6 flex">
+        {tabs.map((t) => (
           <button
-            key={v}
-            onClick={() => setView(v)}
-            className={`rounded-lg px-4 py-2 text-sm font-medium ${
-              view === v ? "bg-navy-700 text-white" : "bg-white text-slate-600 border"
-            }`}
+            key={t.key}
+            className="tab-retro"
+            data-active={view === t.key}
+            onClick={() => setView(t.key)}
           >
-            {v === "top" ? "Plus importants" : v === "sole" ? "Source unique" : "Tous"}
+            {t.label}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-6 space-y-3">
         {contracts.map((c) => (
-          <div key={c.id} className="rounded-lg border bg-white p-4 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-medium text-slate-900">{c.title}</h3>
-                <p className="text-sm text-slate-500">
-                  {c.procurementMethod ?? "N/A"}
-                  {c.isSoleSource && <span className="ml-2 text-red-flag font-medium">Source unique</span>}
-                  {c.bidCount != null && <span className="ml-2">{c.bidCount} soumissionnaire(s)</span>}
-                </p>
+          <div key={c.id} className="card-3d p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="font-serif text-base font-bold tracking-tight text-ink"
+                  style={{ fontFamily: "var(--font-fraunces)" }}>
+                  {c.title}
+                </h3>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className="badge-retro">{c.procurementMethod ?? "N/A"}</span>
+                  {c.isSoleSource && (
+                    <span className="badge-retro" style={{ borderColor: "var(--color-accent)", color: "var(--color-accent)" }}>
+                      Source unique
+                    </span>
+                  )}
+                  {c.bidCount != null && (
+                    <span className="badge-retro">{c.bidCount} soumissionnaire(s)</span>
+                  )}
+                </div>
               </div>
-              <p className="text-sm font-semibold text-slate-700">
-                {new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(c.amount)}
+              <p className="ink-value shrink-0 text-base">
+                {formatCAD(c.amount)}
               </p>
             </div>
           </div>
         ))}
+        {contracts.length === 0 && (
+          <p className="font-mono text-xs text-ink-faint">Aucun contrat trouvé.</p>
+        )}
       </div>
     </div>
   )

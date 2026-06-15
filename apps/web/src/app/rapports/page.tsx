@@ -1,14 +1,17 @@
 export default function ReportsPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900">Rapports d'audit</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Rapports générés automatiquement par les agents d'analyse.
+      <h1 className="section-header" style={{ fontFamily: "var(--font-fraunces)" }}>
+        Rapports d&apos;audit
+      </h1>
+      <p className="mt-2 font-mono text-xs uppercase tracking-[0.08em] text-ink-muted">
+        Rapports générés automatiquement par les agents d&apos;analyse.
       </p>
+      <div className="divider-retro mt-4" />
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-8 space-y-4">
         <ReportCard
-          title="Rapport d'audit indépendant des finances publiques du Québec"
+          title="Audit indépendant des finances publiques du Québec"
           date="14 juin 2026"
           description="Analyse complète des 10 étapes : revenus, dépenses, contrats, sociétés d'État, drapeaux rouges, et répartition par contribuable."
           file="/rapport_audit_finances_quebec.md"
@@ -42,16 +45,19 @@ function ReportCard({
   file: string
 }) {
   return (
-    <div className="rounded-lg border bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-semibold text-slate-900">{title}</h3>
-          <p className="mt-1 text-xs text-slate-400">{date}</p>
-          <p className="mt-2 text-sm text-slate-600">{description}</p>
+    <div className="card-3d p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="font-serif text-lg font-bold tracking-tight text-ink"
+            style={{ fontFamily: "var(--font-fraunces)" }}>
+            {title}
+          </h3>
+          <p className="mt-1 font-mono text-[0.625rem] uppercase tracking-wider text-ink-faint">{date}</p>
+          <p className="mt-2 font-mono text-xs leading-relaxed text-ink-muted">{description}</p>
         </div>
         <a
           href={file}
-          className="rounded-lg bg-navy-700 px-4 py-2 text-sm font-medium text-white hover:bg-navy-800"
+          className="btn-retro btn-retro-primary shrink-0"
         >
           Consulter
         </a>
