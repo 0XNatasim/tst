@@ -16,7 +16,7 @@ export interface IngestResult {
 
 /** Québec contracts open data (SEAO), resolved via the Données Québec CKAN API.
  * Override the dataset slug with SEAO_DATASET, or pin a CSV with SEAO_CONTRACTS_URL. */
-const DATASET = process.env.SEAO_DATASET ?? "systeme-electronique-d-appel-d-offres-seao"
+const DATASET = process.env.SEAO_DATASET ?? "systeme-electronique-dappel-doffres-seao"
 const DIRECT_URL = process.env.SEAO_CONTRACTS_URL
 const PREFER = /contrat|attribu|adjudic|conclu/i
 
