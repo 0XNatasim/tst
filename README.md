@@ -4,90 +4,113 @@
 
 Suivez chaque dollar public, de la collecte jusqu'au bénéficiaire final.
 
-## Stack technique
+## Stack
 
 ```
-Frontend : Next.js 15 + React 19 + Tailwind 4 + Recharts
-Backend  : NestJS 11 + TypeScript
-Database : PostgreSQL 17 + pgvector
-Graph    : Neo4j (schema ready)
-Crawlers : Playwright + PDF parsers
-AI       : OpenAI / Claude agents
-ORM      : Drizzle
-Infra    : Docker, Vercel-ready
+Frontend  : Next.js 15 + React 19 + Tailwind 4 + Recharts
+API       : Next.js Route Handlers (API routes)
+Database  : PostgreSQL 17 + Drizzle ORM + pgvector
+Hosting   : Vercel (frontend + API serverless)
+DB Host   : Neon.tech ou Supabase (PostgreSQL serverless)
+Crawlers  : Vercel Cron Jobs + Playwright
+AI        : OpenAI / Claude
 ```
 
 ## Structure
 
 ```
 openquebec/
-├── apps/
-│   ├── web/                # Next.js frontend
-│   │   ├── src/app/        # Pages (dashboard, explorer, contrats, budgets, rapports)
-│   │   └── src/components/ # React components
-│   └── api/                # NestJS REST API
-│       └── src/
-│           ├── ministries/
-│           ├── contracts/
-│           ├── organizations/
-│           ├── budgets/
-│           ├── search/
-│           └── dashboard/
+├── apps/web/
+│   ├── src/app/
+│   │   ├── page.tsx              # Dashboard
+│   │   ├── explorer/page.tsx     # Recherche
+│   │   ├── contrats/page.tsx     # Contrats
+│   │   ├── budgets/page.tsx      # Budgets
+│   │   ├── rapports/page.tsx     # Rapports
+│   │   └── api/                  # API routes (serverless)
+│   └── src/components/
 ├── packages/
-│   ├── db/                 # Drizzle schema + client
-│   ├── shared/             # Types partagés
-│   ├── crawlers/           # Moteur d'ingestion (Budget, SEAO, Comptes publics)
-│   └── ai/                 # Agents d'analyse (OpenAI)
-├── scripts/seed.ts         # Données initiales
-├── docker-compose.yml
-└── Dockerfile.*
+│   ├── db/         # Drizzle schema + client
+│   ├── shared/     # Types
+│   ├── crawlers/   # Moteur d'ingestion
+│   └── ai/         # Agents d'analyse
+├── scripts/
+├── rapport_audit_finances_quebec.md
+├── vercel.json
+└── docker-compose.yml
 ```
 
-## Démarrage rapide
+## Déploiement Vercel
+
+### 1. Base de données (Neon.tech — gratuit)
+
+```bash
+# 1. Aller sur https://neon.tech
+# 2. Créer un projet → copier la connection string
+#    postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+```
+
+### 2. Variables d'environnement
+
+Dans Vercel Dashboard → **Project Settings → Environment Variables** :
+
+| Variable | Valeur |
+|----------|--------|
+| `DATABASE_URL` | Connection string Neon |
+
+### 3. Déploiement
+
+```bash
+# Installer Vercel CLI
+pnpm add -g vercel
+
+# Lier et déployer
+vercel link
+vercel --prod
+```
+
+Ou connecter le dépôt GitHub directement sur [vercel.com/new](https://vercel.com/new).
+
+### 4. Migrations DB
+
+```bash
+# Après déploiement, lancer les migrations une fois :
+pnpm db:push
+pnpm tsx scripts/seed.ts
+```
+
+### 5. Cron (crawler automatique)
+
+Configuré dans `vercel.json` — s'exécute chaque lundi à 6h. Nécessite d'activer les Cron Jobs dans Vercel Dashboard.
+
+## API (toutes serverless)
+
+| Route | Description |
+|-------|-------------|
+| `GET /api/ministries` | Tous les ministères |
+| `GET /api/ministries/[id]` | Détail d'un ministère |
+| `GET /api/ministries/budgets/comparison?fiscalYear=` | Budget vs réel |
+| `GET /api/contracts` | Contrats (paginés) |
+| `GET /api/contracts/top` | Top contrats |
+| `GET /api/contracts/sole-source` | Source unique |
+| `GET /api/contracts/stats` | Statistiques |
+| `GET /api/organizations?q=&type=` | Organismes et recherche |
+| `GET /api/budgets?fiscalYear=` | Budgets |
+| `GET /api/budgets/overruns` | Dépassements |
+| `GET /api/search?q=` | Recherche unifiée |
+| `GET /api/dashboard/summary` | Résumé |
+| `GET /api/dashboard/red-flags` | Drapeaux rouges |
+
+## Développement local
 
 ```bash
 pnpm install
-cp .env.example .env
-docker compose up -d db
+cp .env.example .env      # Mettre DATABASE_URL (Neon ou local)
 pnpm db:push
 pnpm tsx scripts/seed.ts
-pnpm dev
+pnpm dev                  # → http://localhost:3000
 ```
-
-- Frontend : http://localhost:3000
-- API : http://localhost:4000
-
-## API
-
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| GET | `/api/ministries` | Tous les ministères |
-| GET | `/api/ministries/:id` | Détail d'un ministère |
-| GET | `/api/ministries/budgets/comparison` | Budget vs réel par exercice |
-| GET | `/api/contracts` | Contrats (paginés) |
-| GET | `/api/contracts/top` | Top contrats par montant |
-| GET | `/api/contracts/sole-source` | Contrats source unique |
-| GET | `/api/contracts/stats` | Statistiques |
-| GET | `/api/contracts/vendor/:id` | Contrats par fournisseur |
-| GET | `/api/organizations` | Organismes et fournisseurs |
-| GET | `/api/organizations/search?q=` | Recherche d'organismes |
-| GET | `/api/budgets?fiscalYear=` | Budgets par année |
-| GET | `/api/budgets/overruns` | Dépassements budgétaires |
-| GET | `/api/search?q=` | Recherche unifiée |
-| GET | `/api/dashboard/summary` | Résumé tableau de bord |
-| GET | `/api/dashboard/red-flags` | Drapeaux rouges |
-
-## Rapports générés
-
-- `rapport_audit_finances_quebec.md` — Audit complet en 10 étapes
-  - Revenus (166,5 G$ en 2026-2027)
-  - Dépenses par ministère (Santé: 68,7 G$)
-  - Drapeaux rouges (14 détectés, 3 critiques)
-  - Analyse des sociétés d'État
-  - Répartition de 10 000 $ par contribuable
-  - Scores d'efficacité (moyenne: 57/100)
-  - 9 recommandations
 
 ## Licence
 
-MIT — Données publiques. Transparence citoyenne.
+MIT
