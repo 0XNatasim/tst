@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { runIngest, loadRows, searchDatasets } from "@openquebec/crawlers"
+import { runIngest, loadRows, searchDatasets, peekResource } from "@openquebec/crawlers"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -27,6 +27,15 @@ export async function GET(request: Request) {
     if (debug === "search") {
       const q = params.get("q") ?? ""
       return NextResponse.json({ query: q, datasets: await searchDatasets(q) })
+    }
+    if (debug === "raw") {
+      const which = params.get("which") ?? "contracts"
+      const datasetId =
+        which === "budget"
+          ? process.env.BUDGET_DATASET ?? "budget-de-depenses"
+          : process.env.SEAO_DATASET ?? "systeme-electronique-dappel-doffres-seao"
+      const prefer = which === "budget" ? /portefeuille|d|programme|cr/i : /contrat|attribu|adjudic|conclu/i
+      return NextResponse.json(await peekResource(datasetId, prefer))
     }
     if (debug === "budget" || debug === "contracts") {
       const datasetId =

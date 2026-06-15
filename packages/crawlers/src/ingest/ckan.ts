@@ -84,6 +84,22 @@ export async function fetchDatastore(resourceId: string, max = 50_000): Promise<
   return out
 }
 
+/** Fetch the first bytes of a dataset's chosen resource without parsing,
+ * so we can inspect the raw delimiter/quoting when parsing fails. */
+export async function peekResource(datasetId: string, prefer?: RegExp, format = "CSV") {
+  const resources = await listResources(datasetId)
+  const r = pickResource(resources, format, prefer)
+  if (!r?.url) return { resource: r ?? null, sourceUrl: undefined, head: null }
+  const res = await fetch(r.url, { redirect: "follow" })
+  const text = await res.text()
+  return {
+    sourceUrl: r.url,
+    format: r.format,
+    datastore_active: r.datastore_active ?? false,
+    head: text.slice(0, 1000),
+  }
+}
+
 /** Resolve rows for an ingestion source.
  * - If `directUrl` is set, fetch that CSV directly.
  * - Otherwise discover the dataset's best resource via CKAN: use the datastore

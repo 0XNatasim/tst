@@ -15,9 +15,9 @@ export async function fetchCsv(url: string, signal?: AbortSignal): Promise<Row[]
     skip_empty_lines: true,
     relax_column_count: true,
     relax_quotes: true,
+    skip_records_with_error: true,
     bom: true,
     delimiter: detectDelimiter(text),
-    trim: true,
   }) as Row[]
   return records
 }

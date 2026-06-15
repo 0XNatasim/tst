@@ -3,4 +3,4 @@
 // so it is safe to import from serverless functions such as the cron route.
 export { runIngest, ingestContracts, ingestBudgets } from "./ingest"
 export type { RunSummary, IngestResult } from "./ingest"
-export { loadRows, searchDatasets } from "./ingest/ckan"
+export { loadRows, searchDatasets, peekResource } from "./ingest/ckan"
