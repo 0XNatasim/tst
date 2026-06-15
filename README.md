@@ -4,91 +4,71 @@
 
 Suivez chaque dollar public, de la collecte jusqu'au bénéficiaire final.
 
-## Stack
+---
 
-```
-Frontend  : Next.js 15 + React 19 + Tailwind 4 + Recharts
-API       : Next.js Route Handlers (API routes)
-Database  : PostgreSQL 17 + Drizzle ORM + pgvector
-Hosting   : Vercel (frontend + API serverless)
-DB Host   : Supabase (PostgreSQL serverless + auth + realtime)
-Crawlers  : Vercel Cron Jobs + Playwright
-AI        : OpenAI / Claude
-```
+## Mise en route — Supabase + Vercel (5 minutes)
 
-## Structure
+### 1. Créer Supabase
 
-```
-openquebec/
-├── apps/web/
-│   ├── src/app/
-│   │   ├── page.tsx              # Dashboard
-│   │   ├── explorer/page.tsx     # Recherche
-│   │   ├── contrats/page.tsx     # Contrats
-│   │   ├── budgets/page.tsx      # Budgets
-│   │   ├── rapports/page.tsx     # Rapports
-│   │   └── api/                  # API routes (serverless)
-│   └── src/components/
-├── packages/
-│   ├── db/         # Drizzle schema + client
-│   ├── shared/     # Types
-│   ├── crawlers/   # Moteur d'ingestion
-│   └── ai/         # Agents d'analyse
-├── scripts/
-├── rapport_audit_finances_quebec.md
-├── vercel.json
-└── docker-compose.yml
-```
+- Va sur [supabase.com](https://supabase.com) → **New project**
+- Note la **Database password** (celle que tu choisis)
+- Une fois créé, va dans **Project Settings → Database → Connection string**
 
-## Déploiement Vercel
+### 2. Lier à Vercel
 
-### 1. Base de données (Supabase — gratuit)
-
-```bash
-# Option A : Supabase local
-pnpm supabase:start
-# DATABASE_URL = postgresql://postgres:postgres@localhost:54322/postgres
-
-# Option B : Supabase cloud (production)
-# 1. https://supabase.com → New project
-# 2. Settings → Database → Connection pooler (port 6543)
-#    DATABASE_URL = postgresql://postgres.[PROJECT]:[PASSWORD]@[REGION].pooler.supabase.co:6543/postgres
-```
-
-### 2. Variables d'environnement
-
-Dans Vercel Dashboard → **Project Settings → Environment Variables** :
+- Va sur [vercel.com/new](https://vercel.com/new) → Importe ce dépôt GitHub
+- Dans **Environment Variables**, ajoute :
 
 | Variable | Valeur |
 |----------|--------|
-| `DATABASE_URL` | Connection string Neon |
+| `DATABASE_URL` | `postgresql://postgres.[PROJECT]:[PASSWORD]@[REGION].pooler.supabase.co:6543/postgres` |
 
-### 3. Déploiement
+- Remplace `[PROJECT]`, `[PASSWORD]`, `[REGION]` par les valeurs de Supabase → **Connection string (Session pooler)**
 
-```bash
-# Installer Vercel CLI
-pnpm add -g vercel
+### 3. Lancer les migrations
 
-# Lier et déployer
-vercel link
-vercel --prod
-```
-
-Ou connecter le dépôt GitHub directement sur [vercel.com/new](https://vercel.com/new).
-
-### 4. Migrations DB
+Une fois déployé, ouvre un terminal et :
 
 ```bash
-# Après déploiement, lancer les migrations une fois :
 pnpm db:push
 pnpm tsx scripts/seed.ts
 ```
 
-### 5. Cron (crawler automatique)
+**Terminé.** L'app est en ligne sur `https://tst.vercel.app`.
 
-Configuré dans `vercel.json` — s'exécute chaque lundi à 6h. Nécessite d'activer les Cron Jobs dans Vercel Dashboard.
+### Cron (optionnel)
 
-## API (toutes serverless)
+Le crawler automatique est configuré dans `vercel.json` (chaque lundi 6h). Active-le dans Vercel Dashboard → **Cron Jobs**.
+
+---
+
+## Stack
+
+- **Frontend** : Next.js 15 + React 19 + Tailwind 4 + Recharts
+- **API** : Next.js Route Handlers (serverless)
+- **DB** : PostgreSQL Supabase + Drizzle ORM + pgvector
+- **Crawlers** : Vercel Cron Jobs + Playwright
+- **AI** : OpenAI / Claude
+
+## Structure
+
+```
+apps/web/
+├── src/app/
+│   ├── page.tsx              # Dashboard
+│   ├── explorer/page.tsx     # Recherche
+│   ├── contrats/page.tsx     # Contrats
+│   ├── budgets/page.tsx      # Budgets + graphiques
+│   ├── rapports/page.tsx     # Rapports d'audit
+│   └── api/                  # 13 endpoints serverless
+packages/
+├── db/         # Schéma Drizzle
+├── shared/     # Types
+├── crawlers/   # Ingestion données
+└── ai/         # Agents d'analyse
+```
+
+## API
 
 | Route | Description |
 |-------|-------------|
@@ -106,19 +86,4 @@ Configuré dans `vercel.json` — s'exécute chaque lundi à 6h. Nécessite d'ac
 | `GET /api/dashboard/summary` | Résumé |
 | `GET /api/dashboard/red-flags` | Drapeaux rouges |
 
-## Développement local
-
-```bash
-pnpm install
-cp .env.example .env
-# Démarrer Supabase local
-pnpm supabase:start
-# Lancer les migrations + seed
-pnpm db:push
-pnpm tsx scripts/seed.ts
-pnpm dev                  # → http://localhost:3000
-```
-
-## Licence
-
-MIT
+## Licence MIT
