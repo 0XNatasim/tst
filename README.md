@@ -11,7 +11,7 @@ Frontend  : Next.js 15 + React 19 + Tailwind 4 + Recharts
 API       : Next.js Route Handlers (API routes)
 Database  : PostgreSQL 17 + Drizzle ORM + pgvector
 Hosting   : Vercel (frontend + API serverless)
-DB Host   : Neon.tech ou Supabase (PostgreSQL serverless)
+DB Host   : Supabase (PostgreSQL serverless + auth + realtime)
 Crawlers  : Vercel Cron Jobs + Playwright
 AI        : OpenAI / Claude
 ```
@@ -42,12 +42,17 @@ openquebec/
 
 ## Déploiement Vercel
 
-### 1. Base de données (Neon.tech — gratuit)
+### 1. Base de données (Supabase — gratuit)
 
 ```bash
-# 1. Aller sur https://neon.tech
-# 2. Créer un projet → copier la connection string
-#    postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+# Option A : Supabase local
+pnpm supabase:start
+# DATABASE_URL = postgresql://postgres:postgres@localhost:54322/postgres
+
+# Option B : Supabase cloud (production)
+# 1. https://supabase.com → New project
+# 2. Settings → Database → Connection pooler (port 6543)
+#    DATABASE_URL = postgresql://postgres.[PROJECT]:[PASSWORD]@[REGION].pooler.supabase.co:6543/postgres
 ```
 
 ### 2. Variables d'environnement
@@ -105,7 +110,10 @@ Configuré dans `vercel.json` — s'exécute chaque lundi à 6h. Nécessite d'ac
 
 ```bash
 pnpm install
-cp .env.example .env      # Mettre DATABASE_URL (Neon ou local)
+cp .env.example .env
+# Démarrer Supabase local
+pnpm supabase:start
+# Lancer les migrations + seed
 pnpm db:push
 pnpm tsx scripts/seed.ts
 pnpm dev                  # → http://localhost:3000

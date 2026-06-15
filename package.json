@@ -3,6 +3,9 @@
   "private": true,
   "description": "OpenQuebec.ai — Quebec public finance transparency platform",
   "scripts": {
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:seed": "npx supabase db push && tsx scripts/seed.ts",
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
