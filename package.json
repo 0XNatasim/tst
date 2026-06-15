@@ -3,26 +3,14 @@
   "private": true,
   "description": "OpenQuebec.ai — Quebec public finance transparency platform",
   "scripts": {
-    "supabase:start": "npx supabase start",
-    "supabase:stop": "npx supabase stop",
-    "supabase:seed": "npx supabase db push && tsx scripts/seed.ts",
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "test": "turbo test",
-    "db:generate": "pnpm --filter @openquebec/db generate",
+    "dev": "pnpm --filter @openquebec/web dev",
+    "build": "pnpm --filter @openquebec/web build",
     "db:push": "pnpm --filter @openquebec/db push",
-    "db:studio": "pnpm --filter @openquebec/db studio",
-    "crawl": "pnpm --filter @openquebec/crawlers start",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json}\""
-  },
-  "devDependencies": {
-    "turbo": "^2.4.0",
-    "prettier": "^3.4.0",
-    "typescript": "^5.7.0"
+    "db:generate": "pnpm --filter @openquebec/db generate",
+    "seed": "tsx scripts/seed.ts"
   },
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@9.15.4"
 }
