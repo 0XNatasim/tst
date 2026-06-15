@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
     "start": "tsx src/main.ts",
+    "ingest": "tsx src/main.ts",
     "crawl:budget": "tsx src/crawlers/budget-crawler.ts",
-    "crawl:seao": "tsx src/crawlers/seao-crawler.ts",
     "crawl:public-accounts": "tsx src/crawlers/public-accounts-crawler.ts",
     "lint": "tsc --noEmit"
   },

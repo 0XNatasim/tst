@@ -15,6 +15,7 @@
     "react-dom": "^19.0.0",
     "@openquebec/db": "workspace:*",
     "@openquebec/shared": "workspace:*",
+    "@openquebec/crawlers": "workspace:*",
     "drizzle-orm": "^0.38.0",
     "postgres": "^3.4.0",
     "recharts": "^2.15.0",
