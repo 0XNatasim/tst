@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { budgets, contracts, ministries, organizations } from "@openquebec/db"
 import { eq, sql } from "drizzle-orm"
 
 export async function GET() {
   const [budgetStats, contractStats, ministryCount, vendorCount] = await Promise.all([
-    db.select({ totalPlanned: sql<number>`sum(planned)`, totalActual: sql<number>`sum(actual)` }).from(budgets),
-    db.select({ total: sql<number>`count(*)`, totalAmount: sql<number>`sum(amount)` }).from(contracts),
-    db.select({ count: sql<number>`count(*)` }).from(ministries),
-    db.select({ count: sql<number>`count(*)` }).from(organizations).where(eq(organizations.type, "vendor")),
+    (await getDb()).select({ totalPlanned: sql<number>`sum(planned)`, totalActual: sql<number>`sum(actual)` }).from(budgets),
+    (await getDb()).select({ total: sql<number>`count(*)`, totalAmount: sql<number>`sum(amount)` }).from(contracts),
+    (await getDb()).select({ count: sql<number>`count(*)` }).from(ministries),
+    (await getDb()).select({ count: sql<number>`count(*)` }).from(organizations).where(eq(organizations.type, "vendor")),
   ])
   return NextResponse.json({
     totalBudgetPlanned: budgetStats[0]?.totalPlanned ?? 0,

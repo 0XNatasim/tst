@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { getDb } from "@/lib/db"
 import { contracts } from "@openquebec/db"
 import { sql } from "drizzle-orm"
 
 export async function GET() {
-  const result = await db.select({
+  const result = (await getDb()).select({
     total: sql<number>`count(*)`,
     totalAmount: sql<number>`sum(amount)`,
     avgAmount: sql<number>`avg(amount)`,
