@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto"
 import { contracts } from "@openquebec/db"
 import { getDb } from "./db"
-import { fetchCsv, field, money, date, type Row } from "./parse"
+import { field, money, date, type Row } from "./parse"
+import { loadRows } from "./ckan"
 import { getOrCreateOrganization, getOrCreateMinistry } from "./resolve"
 
 export interface IngestResult {
@@ -13,10 +14,11 @@ export interface IngestResult {
   errors: number
 }
 
-/** Default Québec contracts open-data source (SEAO). Override with SEAO_CONTRACTS_URL. */
-const DEFAULT_URL =
-  process.env.SEAO_CONTRACTS_URL ??
-  "https://www.donneesquebec.ca/recherche/dataset/systeme-electronique-d-appel-d-offres-seao/resource/contrats.csv"
+/** Québec contracts open data (SEAO), resolved via the Données Québec CKAN API.
+ * Override the dataset slug with SEAO_DATASET, or pin a CSV with SEAO_CONTRACTS_URL. */
+const DATASET = process.env.SEAO_DATASET ?? "systeme-electronique-d-appel-d-offres-seao"
+const DIRECT_URL = process.env.SEAO_CONTRACTS_URL
+const PREFER = /contrat|attribu|adjudic|conclu/i
 
 const SOLE_SOURCE = /gr[eé]\s*[àa]\s*gr[eé]|sole.?source|contrat de gr[eé]/i
 
@@ -26,13 +28,12 @@ function rowExternalId(row: Row, fallbackSeed: string): string {
   return "seao-" + createHash("sha1").update(fallbackSeed).digest("hex").slice(0, 16)
 }
 
-/** Fetch the SEAO contracts CSV, map each row, and upsert into `contracts`. */
-export async function ingestContracts(url = DEFAULT_URL, limit?: number): Promise<IngestResult> {
-  const result: IngestResult = { source: "SEAO", url, rows: 0, upserted: 0, skipped: 0, errors: 0 }
+/** Load the SEAO contracts data (CKAN datastore JSON or CSV), map each row,
+ * and upsert into `contracts`. */
+export async function ingestContracts(directUrl = DIRECT_URL, limit?: number): Promise<IngestResult> {
   const db = getDb()
-
-  const rows = await fetchCsv(url)
-  result.rows = rows.length
+  const { rows, sourceUrl } = await loadRows({ directUrl, datasetId: DATASET, prefer: PREFER })
+  const result: IngestResult = { source: "SEAO", url: sourceUrl, rows: rows.length, upserted: 0, skipped: 0, errors: 0 }
   const slice = limit ? rows.slice(0, limit) : rows
 
   for (const row of slice) {

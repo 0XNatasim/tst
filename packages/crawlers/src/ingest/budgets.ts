@@ -1,15 +1,16 @@
 import { eq, and } from "drizzle-orm"
 import { budgets, ministries } from "@openquebec/db"
 import { getDb } from "./db"
-import { fetchCsv, field, money, type Row } from "./parse"
+import { field, money, type Row } from "./parse"
+import { loadRows } from "./ckan"
 import { getOrCreateMinistry } from "./resolve"
 import type { IngestResult } from "./contracts"
 
-/** Default Québec budget open-data source (Comptes publics / Budget de dépenses).
- * Override with BUDGET_URL. */
-const DEFAULT_URL =
-  process.env.BUDGET_URL ??
-  "https://www.donneesquebec.ca/recherche/dataset/budget-de-depenses/resource/depenses-par-portefeuille.csv"
+/** Québec budget open data (Budget de dépenses), resolved via the Données Québec
+ * CKAN API. Override the dataset slug with BUDGET_DATASET, or pin a CSV with BUDGET_URL. */
+const DATASET = process.env.BUDGET_DATASET ?? "budget-de-depenses"
+const DIRECT_URL = process.env.BUDGET_URL
+const PREFER = /portefeuille|d[eé]pens|programme|cr[eé]dit/i
 
 function variance(planned?: string, actual?: string) {
   if (planned == null || actual == null) return { variance: undefined, variancePct: undefined }
@@ -33,13 +34,11 @@ function fiscalYear(row: Row): string {
   return fy.slice(0, 9)
 }
 
-/** Fetch a budget CSV (planned vs actual by ministry) and upsert into `budgets`. */
-export async function ingestBudgets(url = DEFAULT_URL, limit?: number): Promise<IngestResult> {
-  const result: IngestResult = { source: "Budget", url, rows: 0, upserted: 0, skipped: 0, errors: 0 }
+/** Load budget data (planned vs actual by ministry) and upsert into `budgets`. */
+export async function ingestBudgets(directUrl = DIRECT_URL, limit?: number): Promise<IngestResult> {
   const db = getDb()
-
-  const rows = await fetchCsv(url)
-  result.rows = rows.length
+  const { rows, sourceUrl } = await loadRows({ directUrl, datasetId: DATASET, prefer: PREFER })
+  const result: IngestResult = { source: "Budget", url: sourceUrl, rows: rows.length, upserted: 0, skipped: 0, errors: 0 }
   const slice = limit ? rows.slice(0, limit) : rows
 
   for (const row of slice) {
