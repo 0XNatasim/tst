@@ -1,5 +1,5 @@
-import { BudgetCrawler } from "./crawlers/budget-crawler.js"
-import { PublicAccountsCrawler } from "./crawlers/public-accounts-crawler.js"
+import { BudgetCrawler } from "./crawlers/budget-crawler"
+import { PublicAccountsCrawler } from "./crawlers/public-accounts-crawler"
 
 const sources = [
   { name: "Budget Québec", crawler: BudgetCrawler, urls: [
