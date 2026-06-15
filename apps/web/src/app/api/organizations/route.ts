@@ -9,9 +9,10 @@ export async function GET(request: Request) {
   const q = searchParams.get("q")
   const limit = parseInt(searchParams.get("limit") ?? "50")
   const offset = parseInt(searchParams.get("offset") ?? "0")
+  const db = await getDb()
   let data
-  if (q) data = (await getDb()).select().from(organizations).where(like(organizations.normalizedName, `%${q}%`)).limit(20)
-  else if (type) data = (await getDb()).select().from(organizations).where(eq(organizations.type, type)).limit(limit).offset(offset)
-  else data = (await getDb()).select().from(organizations).orderBy(desc(organizations.createdAt)).limit(limit).offset(offset)
+  if (q) data = await db.select().from(organizations).where(like(organizations.normalizedName, `%${q}%`)).limit(20)
+  else if (type) data = await db.select().from(organizations).where(eq(organizations.type, type)).limit(limit).offset(offset)
+  else data = await db.select().from(organizations).orderBy(desc(organizations.createdAt)).limit(limit).offset(offset)
   return NextResponse.json(data)
 }
