@@ -3,7 +3,7 @@ import { budgets, ministries } from "@openquebec/db"
 import { getDb } from "./db"
 import { field, money, type Row } from "./parse"
 import { loadRows } from "./ckan"
-import { getOrCreateMinistry } from "./resolve"
+import { getOrCreateMinistry, preloadCaches } from "./resolve"
 import type { IngestResult } from "./contracts"
 
 /** Québec budget open data (Budget de dépenses), resolved via the Données Québec
@@ -44,6 +44,7 @@ export async function ingestBudgets(directUrl = DIRECT_URL, limit?: number): Pro
   const { rows, sourceUrl } = await loadRows({ directUrl, datasetId: DATASET, prefer: PREFER })
   const result: IngestResult = { source: "Budget", url: sourceUrl, rows: rows.length, upserted: 0, skipped: 0, errors: 0 }
   if (!rows.length) return result
+  await preloadCaches()
 
   const columns = Object.keys(rows[0])
   const plannedKey = findPlannedKey(columns)
