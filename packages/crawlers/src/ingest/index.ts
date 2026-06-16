@@ -1,8 +1,9 @@
 import { ingestContracts, type IngestResult } from "./contracts"
 import { ingestBudgets } from "./budgets"
+import { ingestActuals, actualsConfigured } from "./actuals"
 import { resetCaches } from "./resolve"
 
-export { ingestContracts, ingestBudgets, type IngestResult }
+export { ingestContracts, ingestBudgets, ingestActuals, type IngestResult }
 
 export interface RunSummary {
   startedAt: string
@@ -19,10 +20,16 @@ export async function runIngest(opts: { limit?: number } = {}): Promise<RunSumma
   const results: IngestResult[] = []
   const errors: string[] = []
 
-  for (const [name, fn] of [
+  const tasks: [string, () => Promise<IngestResult>][] = [
     ["SEAO contracts", () => ingestContracts(undefined, opts.limit)],
     ["Budgets", () => ingestBudgets(undefined, opts.limit)],
-  ] as const) {
+  ]
+  // Actuals (Comptes publics) only run once a source is configured.
+  if (actualsConfigured()) {
+    tasks.push(["Comptes publics", () => ingestActuals(undefined, opts.limit)])
+  }
+
+  for (const [name, fn] of tasks) {
     try {
       results.push(await fn())
     } catch (err) {

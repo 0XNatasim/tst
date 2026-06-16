@@ -66,7 +66,7 @@ export const contracts = pgTable("contracts", {
   amount: numeric("amount", { precision: 18, scale: 2 }),
   originalAmount: numeric("original_amount", { precision: 18, scale: 2 }),
   currency: varchar("currency", { length: 3 }).default("CAD"),
-  procurementMethod: varchar("procurement_method", { length: 50 }),
+  procurementMethod: text("procurement_method"),
   bidCount: integer("bid_count"),
   isSoleSource: boolean("is_sole_source").default(false),
   awardDate: timestamp("award_date"),

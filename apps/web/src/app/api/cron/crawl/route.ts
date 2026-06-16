@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic"
  * Protected by CRON_SECRET when set (Vercel sends it as a Bearer token).
  *
  * Diagnostic modes (no DB writes):
- *   ?debug=search&q=seao   -> list matching dataset slugs on Données Québec
- *   ?debug=budget          -> show the budget file's column names + a sample row
+ *   ?debug=search&q=comptes        -> list matching dataset slugs
+ *   ?debug=cols&dataset=<slug>     -> show a dataset's column names + a sample row
+ *   ?debug=raw&dataset=<slug>      -> peek the raw bytes of a dataset's resource
  */
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams
@@ -30,19 +31,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ query: q, datasets: await searchDatasets(q) })
     }
     if (debug === "raw") {
-      const which = params.get("which") ?? "contracts"
-      const datasetId =
-        which === "budget"
-          ? process.env.BUDGET_DATASET ?? "budget-de-depenses"
-          : process.env.SEAO_DATASET ?? "systeme-electronique-dappel-doffres-seao"
-      const prefer = which === "budget" ? /portefeuille|d|programme|cr/i : /contrat|attribu|adjudic|conclu/i
-      return NextResponse.json(await peekResource(datasetId, prefer))
+      const datasetId = params.get("dataset") ?? process.env.BUDGET_DATASET ?? "budget-de-depenses"
+      return NextResponse.json(await peekResource(datasetId))
     }
-    if (debug === "budget" || debug === "contracts") {
-      const datasetId =
-        debug === "budget"
-          ? process.env.BUDGET_DATASET ?? "budget-de-depenses"
-          : process.env.SEAO_DATASET ?? "systeme-electronique-d-appel-d-offres-seao"
+    if (debug === "cols") {
+      const datasetId = params.get("dataset") ?? process.env.BUDGET_DATASET ?? "budget-de-depenses"
       const { rows, sourceUrl } = await loadRows({ datasetId })
       return NextResponse.json({
         sourceUrl,
