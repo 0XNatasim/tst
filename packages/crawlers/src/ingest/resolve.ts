@@ -93,6 +93,49 @@ function deriveCode(name: string): string {
   return code || name.slice(0, 10).toUpperCase()
 }
 
+/** Load all existing organizations and ministries into the caches with a single
+ * query each, so per-row lookups during a run become in-memory hits. */
+export async function preloadCaches() {
+  const db = getDb()
+  const [orgs, mins] = await Promise.all([
+    db.select({ id: organizations.id, normalizedName: organizations.normalizedName }).from(organizations),
+    db.select({ id: ministries.id, code: ministries.code, name: ministries.name }).from(ministries),
+  ])
+  for (const o of orgs) orgCache.set(o.normalizedName, o.id)
+  for (const m of mins) {
+    ministryCache.set(normalizeName(m.name), m.id)
+    if (m.code) ministryCache.set(m.code.toLowerCase(), m.id)
+  }
+}
+
+/** Batch-create any organizations not already cached, then return so callers can
+ * resolve every name from `orgCache`. Assumes preloadCaches() ran first. */
+export async function ensureOrganizations(names: Iterable<string>, type = "vendor") {
+  const db = getDb()
+  const missing = new Map<string, string>() // normalized -> display name
+  for (const n of names) {
+    const norm = normalizeName(n)
+    if (norm && !orgCache.has(norm) && !missing.has(norm)) missing.set(norm, n)
+  }
+  const entries = [...missing]
+  for (let i = 0; i < entries.length; i += 500) {
+    const chunk = entries.slice(i, i + 500)
+    const inserted = await db
+      .insert(organizations)
+      .values(chunk.map(([norm, name]) => ({ name, normalizedName: norm, type })))
+      .returning({ id: organizations.id, normalizedName: organizations.normalizedName })
+    for (const r of inserted) orgCache.set(r.normalizedName, r.id)
+  }
+}
+
+export function orgId(name: string | undefined): string | undefined {
+  return name ? orgCache.get(normalizeName(name)) : undefined
+}
+
+export function ministryId(name: string | undefined): string | undefined {
+  return name ? ministryCache.get(normalizeName(name)) : undefined
+}
+
 export function resetCaches() {
   orgCache.clear()
   ministryCache.clear()
