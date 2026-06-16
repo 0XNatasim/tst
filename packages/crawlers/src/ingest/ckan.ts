@@ -30,6 +30,27 @@ export async function listResources(datasetId: string): Promise<CkanResource[]> 
   return [...pkg.resources].sort((a, b) => time(b) - time(a))
 }
 
+/** Load every CSV resource in a dataset whose name matches `pattern`, returning
+ * one entry per file. Used to ingest all available years at once. */
+export async function loadCsvResources(
+  datasetId: string,
+  pattern: RegExp,
+): Promise<{ url: string; name: string; rows: Row[] }[]> {
+  const resources = await listResources(datasetId)
+  const matching = resources.filter(
+    (r) => (r.format ?? "").toUpperCase() === "CSV" && pattern.test(r.name ?? "") && r.url,
+  )
+  const out: { url: string; name: string; rows: Row[] }[] = []
+  for (const r of matching) {
+    try {
+      out.push({ url: r.url!, name: r.name ?? "", rows: await fetchCsv(r.url!) })
+    } catch {
+      // Skip a single unreadable file rather than aborting the whole run.
+    }
+  }
+  return out
+}
+
 /** Search datasets by keyword. Returns slug + title for the top matches,
  * so we can discover the right dataset name to configure. */
 export async function searchDatasets(query: string, rows = 10) {

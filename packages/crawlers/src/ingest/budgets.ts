@@ -1,16 +1,17 @@
 import { eq, and } from "drizzle-orm"
 import { budgets, ministries } from "@openquebec/db"
 import { getDb } from "./db"
-import { field, money, type Row } from "./parse"
-import { loadRows } from "./ckan"
+import { fetchCsv, field, money, type Row } from "./parse"
+import { loadCsvResources } from "./ckan"
 import { getOrCreateMinistry, preloadCaches } from "./resolve"
 import type { IngestResult } from "./contracts"
 
-/** Québec budget open data (Budget de dépenses), resolved via the Données Québec
- * CKAN API. Override the dataset slug with BUDGET_DATASET, or pin a CSV with BUDGET_URL. */
+/** Québec budget open data (Budget de dépenses). All yearly files in the dataset
+ * are ingested so multiple fiscal years are available. */
 const DATASET = process.env.BUDGET_DATASET ?? "budget-de-depenses"
 const DIRECT_URL = process.env.BUDGET_URL
-const PREFER = /portefeuille|d[eé]pens|programme|cr[eé]dit/i
+// Match the yearly budget files in the dataset.
+const NAME = /budget|cr[eé]dit|minist|portefeuille|d[eé]pens/i
 
 const MINISTRY_KEYS = ["portefeuille", "ministere", "ministère", "organisme", "entite"]
 
@@ -37,26 +38,16 @@ function fiscalYear(plannedKey: string | undefined, row: Row): string {
   return "unknown"
 }
 
-/** Load the budget file (one row per program) and aggregate planned amounts by
- * ministry/portefeuille, then upsert one budget row per ministry + fiscal year. */
-export async function ingestBudgets(directUrl = DIRECT_URL, limit?: number): Promise<IngestResult> {
+/** Aggregate one budget file's per-program rows up to ministry totals and upsert. */
+async function processFile(rows: Row[], result: IngestResult, limit?: number) {
   const db = getDb()
-  const { rows, sourceUrl } = await loadRows({ directUrl, datasetId: DATASET, prefer: PREFER })
-  const result: IngestResult = { source: "Budget", url: sourceUrl, rows: rows.length, upserted: 0, skipped: 0, errors: 0 }
-  if (!rows.length) return result
-  await preloadCaches()
-
+  if (!rows.length) return
   const columns = Object.keys(rows[0])
   const plannedKey = findPlannedKey(columns)
   const ministryKey = MINISTRY_KEYS.find((k) => columns.includes(k))
-  if (!plannedKey || !ministryKey) {
-    throw new Error(
-      `Budget columns not recognized. ministryKey=${ministryKey} plannedKey=${plannedKey}. columns=${columns.join(",")}`,
-    )
-  }
+  if (!plannedKey || !ministryKey) return // not a budget file (e.g. data dictionary)
   const fy = fiscalYear(plannedKey, rows[0])
 
-  // Sum the per-program amounts up to the ministry level.
   const totals = new Map<string, number>()
   const slice = limit ? rows.slice(0, limit) : rows
   for (const row of slice) {
@@ -73,29 +64,41 @@ export async function ingestBudgets(directUrl = DIRECT_URL, limit?: number): Pro
     try {
       const ministryId = await getOrCreateMinistry(name)
       const plannedStr = planned.toFixed(2)
-
       const existing = await db
         .select({ id: budgets.id })
         .from(budgets)
         .where(and(eq(budgets.ministryId, ministryId), eq(budgets.fiscalYear, fy)))
         .limit(1)
-
       if (existing.length) {
         await db.update(budgets).set({ planned: plannedStr }).where(eq(budgets.id, existing[0].id))
       } else {
         await db.insert(budgets).values({ ministryId, fiscalYear: fy, planned: plannedStr })
       }
-
       await db
         .update(ministries)
         .set({ budget: plannedStr, fiscalYear: fy, updatedAt: new Date() })
         .where(eq(ministries.id, ministryId))
-
       result.upserted++
     } catch (err) {
       result.errors++
       if (result.errors <= 5) console.error("budget ministry error:", (err as Error).message)
     }
+  }
+}
+
+/** Load every yearly budget file (planned spending by ministry) and upsert one
+ * budget row per ministry + fiscal year. */
+export async function ingestBudgets(directUrl = DIRECT_URL, limit?: number): Promise<IngestResult> {
+  await preloadCaches()
+  const result: IngestResult = { source: "Budget", url: directUrl ?? DATASET, rows: 0, upserted: 0, skipped: 0, errors: 0 }
+
+  const files = directUrl
+    ? [{ url: directUrl, name: "", rows: await fetchCsv(directUrl) }]
+    : await loadCsvResources(DATASET, NAME)
+
+  for (const file of files) {
+    result.rows += file.rows.length
+    await processFile(file.rows, result, limit)
   }
   return result
 }
