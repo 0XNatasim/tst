@@ -100,6 +100,53 @@ export async function peekResource(datasetId: string, prefer?: RegExp, format = 
   }
 }
 
+/** Fetch and parse a JSON resource. */
+export async function fetchJson<T = unknown>(url: string): Promise<T> {
+  const res = await fetch(url, { redirect: "follow" })
+  if (!res.ok) throw new Error(`Fetch failed for ${url}: ${res.status} ${res.statusText}`)
+  return (await res.json()) as T
+}
+
+/** Pick the newest OCDS JSON resource for a dataset and return its releases. */
+export async function loadOcdsReleases(
+  datasetId: string,
+  prefer?: RegExp,
+): Promise<{ releases: OcdsRelease[]; sourceUrl: string }> {
+  const resources = await listResources(datasetId)
+  const r = pickResource(resources, "JSON", prefer) ?? pickResource(resources, "JSON")
+  if (!r?.url) throw new Error(`No JSON resource found in dataset ${datasetId}`)
+  const data = await fetchJson<{ releases?: OcdsRelease[] }>(r.url)
+  return { releases: data.releases ?? [], sourceUrl: r.url }
+}
+
+export interface OcdsParty {
+  id?: string
+  name?: string
+  roles?: string[]
+}
+export interface OcdsAward {
+  id?: string
+  title?: string
+  date?: string
+  value?: { amount?: number; currency?: string }
+  suppliers?: { id?: string; name?: string }[]
+}
+export interface OcdsRelease {
+  ocid?: string
+  id?: string
+  date?: string
+  tag?: string[]
+  buyer?: { id?: string; name?: string }
+  parties?: OcdsParty[]
+  tender?: {
+    title?: string
+    procurementMethod?: string
+    procurementMethodDetails?: string
+    value?: { amount?: number; currency?: string }
+  }
+  awards?: OcdsAward[]
+}
+
 /** Resolve rows for an ingestion source.
  * - If `directUrl` is set, fetch that CSV directly.
  * - Otherwise discover the dataset's best resource via CKAN: use the datastore
