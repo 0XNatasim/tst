@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { runIngest, loadRows, searchDatasets, peekResource } from "@openquebec/crawlers"
+import { runIngest, loadRows, searchDatasets, peekResource, listResources } from "@openquebec/crawlers"
 
 export const maxDuration = 300
 export const dynamic = "force-dynamic"
@@ -29,6 +29,14 @@ export async function GET(request: Request) {
     if (debug === "search") {
       const q = params.get("q") ?? ""
       return NextResponse.json({ query: q, datasets: await searchDatasets(q) })
+    }
+    if (debug === "resources") {
+      const datasetId = params.get("dataset") ?? ""
+      const resources = await listResources(datasetId)
+      return NextResponse.json({
+        dataset: datasetId,
+        resources: resources.map((r) => ({ name: r.name, format: r.format, url: r.url })),
+      })
     }
     if (debug === "raw") {
       const datasetId = params.get("dataset") ?? process.env.BUDGET_DATASET ?? "budget-de-depenses"
