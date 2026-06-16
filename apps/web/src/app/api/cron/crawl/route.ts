@@ -12,15 +12,16 @@ export const dynamic = "force-dynamic"
  *   ?debug=budget          -> show the budget file's column names + a sample row
  */
 export async function GET(request: Request) {
+  const params = new URL(request.url).searchParams
   const secret = process.env.CRON_SECRET
   if (secret) {
     const auth = request.headers.get("authorization")
-    if (auth !== `Bearer ${secret}`) {
+    const key = params.get("key")
+    if (auth !== `Bearer ${secret}` && key !== secret) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     }
   }
 
-  const params = new URL(request.url).searchParams
   const debug = params.get("debug")
 
   try {

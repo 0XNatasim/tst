@@ -124,12 +124,18 @@ export interface OcdsParty {
   name?: string
   roles?: string[]
 }
+export interface OcdsDocument {
+  url?: string
+  title?: string
+  documentType?: string
+}
 export interface OcdsAward {
   id?: string
   title?: string
   date?: string
   value?: { amount?: number; currency?: string }
   suppliers?: { id?: string; name?: string }[]
+  documents?: OcdsDocument[]
 }
 export interface OcdsRelease {
   ocid?: string
@@ -143,8 +149,10 @@ export interface OcdsRelease {
     procurementMethod?: string
     procurementMethodDetails?: string
     value?: { amount?: number; currency?: string }
+    documents?: OcdsDocument[]
   }
   awards?: OcdsAward[]
+  documents?: OcdsDocument[]
 }
 
 /** Resolve rows for an ingestion source.

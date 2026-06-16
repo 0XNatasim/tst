@@ -28,6 +28,19 @@ function buyerName(release: OcdsRelease): string | undefined {
   return party?.name
 }
 
+/** Best official document/notice URL for this award, falling back to the
+ * public SEAO notice page derived from the OCID. */
+function documentUrl(release: OcdsRelease, award?: { documents?: { url?: string }[] }): string | undefined {
+  const fromDocs =
+    award?.documents?.find((d) => d.url)?.url ??
+    release.tender?.documents?.find((d) => d.url)?.url ??
+    release.documents?.find((d) => d.url)?.url
+  if (fromDocs) return fromDocs
+  // SEAO public consultation page for the notice number (ocid suffix).
+  const num = release.ocid?.split("-").pop()
+  return num ? `https://www.seao.ca/Recherche/rech_avis.aspx?ItemId=${num}` : undefined
+}
+
 /** Load the newest SEAO OCDS release file and upsert each award into `contracts`. */
 export async function ingestContracts(_directUrl?: string, limit?: number): Promise<IngestResult> {
   const db = getDb()
@@ -61,6 +74,7 @@ export async function ingestContracts(_directUrl?: string, limit?: number): Prom
         }
         const vendorName = award?.suppliers?.find((s) => s.name)?.name
         const vendorId = vendorName ? await getOrCreateOrganization(vendorName, "vendor") : undefined
+        const docUrl = documentUrl(release, award)
 
         await db
           .insert(contracts)
@@ -74,12 +88,12 @@ export async function ingestContracts(_directUrl?: string, limit?: number): Prom
             procurementMethod: method?.slice(0, 50),
             isSoleSource,
             awardDate: date(award?.date ?? release.date),
-            sourceUrl,
+            sourceUrl: docUrl,
             source: "SEAO",
           })
           .onConflictDoUpdate({
             target: contracts.externalId,
-            set: { title, amount, vendorId, ministryId, procurementMethod: method?.slice(0, 50), isSoleSource, updatedAt: new Date() },
+            set: { title, amount, vendorId, ministryId, procurementMethod: method?.slice(0, 50), isSoleSource, sourceUrl: docUrl, updatedAt: new Date() },
           })
         result.upserted++
       }
