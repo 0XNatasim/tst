@@ -27,20 +27,37 @@ function formatDate(d: string | null): string | null {
 export default function ContractsPage() {
   const [contracts, setContracts] = useState<Contract[]>([])
   const [view, setView] = useState<"all" | "top" | "sole">("top")
+  const [method, setMethod] = useState("all")
   const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => {
-    const endpoint = view === "sole" ? "/api/contracts/sole-source" : view === "top" ? "/api/contracts/top" : "/api/contracts"
+    // A selected procurement method filters across all contracts and takes
+    // precedence over the tab; otherwise the tab chooses the endpoint.
+    const endpoint =
+      method !== "all"
+        ? `/api/contracts?method=${method}&limit=200`
+        : view === "sole"
+          ? "/api/contracts/sole-source"
+          : view === "top"
+            ? "/api/contracts/top"
+            : "/api/contracts?limit=200"
     fetch(endpoint)
       .then((r) => r.json())
       .then(setContracts)
       .catch(() => {})
-  }, [view])
+  }, [view, method])
 
   const tabs = [
     { key: "top" as const, label: "Plus importants" },
     { key: "all" as const, label: "Tous" },
     { key: "sole" as const, label: "Source unique" },
+  ]
+
+  const methods = [
+    { key: "all", label: "Tous les modes" },
+    { key: "public", label: "Appel d'offres public" },
+    { key: "invitation", label: "Appel d'offres sur invitation" },
+    { key: "gre", label: "Contrat de gré à gré" },
   ]
 
   return (
@@ -53,17 +70,33 @@ export default function ContractsPage() {
       </p>
       <div className="divider-retro mt-4" />
 
-      <div className="mt-6 flex">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            className="tab-retro"
-            data-active={view === t.key}
-            onClick={() => setView(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              className="tab-retro"
+              data-active={view === t.key && method === "all"}
+              onClick={() => {
+                setMethod("all")
+                setView(t.key)
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <select
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+          className="select-retro px-3 py-2"
+        >
+          {methods.map((m) => (
+            <option key={m.key} value={m.key}>
+              {m.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="mt-6 space-y-3">

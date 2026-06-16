@@ -106,7 +106,7 @@ export async function ingestContracts(_directUrl?: string, limit?: number): Prom
         currency: award?.value?.currency ?? "CAD",
         vendorName,
         buyer,
-        method: method?.slice(0, 50),
+        method,
         isSoleSource,
         awardDate: date(award?.date ?? release.date),
         sourceUrl: documentUrl(release, award),
