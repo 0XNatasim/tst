@@ -43,8 +43,9 @@ export async function GET(request: Request) {
       return NextResponse.json(await peekResource(datasetId))
     }
     if (debug === "cols") {
+      const directUrl = params.get("url") ?? undefined
       const datasetId = params.get("dataset") ?? process.env.BUDGET_DATASET ?? "budget-de-depenses"
-      const { rows, sourceUrl } = await loadRows({ datasetId })
+      const { rows, sourceUrl } = await loadRows({ directUrl, datasetId })
       return NextResponse.json({
         sourceUrl,
         rowCount: rows.length,
