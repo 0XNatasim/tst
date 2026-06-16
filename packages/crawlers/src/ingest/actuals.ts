@@ -1,16 +1,18 @@
 import { eq, and } from "drizzle-orm"
 import { budgets, ministries } from "@openquebec/db"
 import { getDb } from "./db"
-import { field, money, type Row } from "./parse"
-import { loadRows } from "./ckan"
+import { fetchCsv, field, money, type Row } from "./parse"
+import { loadCsvResources } from "./ckan"
 import { getOrCreateMinistry, preloadCaches } from "./resolve"
 import type { IngestResult } from "./contracts"
 
-/** Actual public spending (Comptes publics). Disabled until a source is set via
- * ACTUALS_DATASET (CKAN slug) or ACTUALS_URL (direct CSV). */
-const DATASET = process.env.ACTUALS_DATASET
+/** Actual public spending (Comptes publics, Volume 2 — "Dépenses et
+ * investissements du fonds général"). Defaults to the Données Québec dataset;
+ * override with ACTUALS_DATASET or pin a CSV with ACTUALS_URL. */
+const DATASET = process.env.ACTUALS_DATASET ?? "comptes-publics-du-gouvernement-volume-2"
 const DIRECT_URL = process.env.ACTUALS_URL
-const PREFER = /comptes|d[eé]pens|portefeuille|r[eé]el/i
+// Match the yearly "Dépenses et investissements du fonds général" files.
+const NAME = /d[eé]penses et investissements du fonds g[eé]n[eé]ral/i
 
 const MINISTRY_KEYS = ["portefeuille", "ministere", "ministère", "organisme", "entite"]
 
@@ -18,47 +20,38 @@ export function actualsConfigured(): boolean {
   return Boolean(DATASET || DIRECT_URL)
 }
 
-/** Locate the actual-spending column (year-suffixed real expenditure, else generic). */
 function findActualKey(columns: string[]): string | undefined {
   return (
     columns.find((c) => /depenses_reelles?_\d{2}_\d{2}/.test(c)) ??
-    columns.find((c) => /depenses_\d{2}_\d{2}/.test(c)) ??
-    columns.find((c) => /^(depensesreelles|depensesreel|reel|actual|depenses)$/.test(c))
+    columns.find((c) => /^(montant|depensesreelles|depensesreel|reel|actual|depenses)$/.test(c))
   )
 }
 
-function fiscalYear(actualKey: string | undefined, row: Row): string {
-  const fromCol = actualKey?.match(/_(\d{2})_(\d{2})/)
-  if (fromCol) return `20${fromCol[1]}-20${fromCol[2]}`
-  const fy = field(row, "exercice", "annee", "anneefinanciere", "fiscalyear", "fiscal_year")
-  if (fy) {
-    const m = fy.match(/(\d{4})\D+(\d{2,4})/)
-    if (m) return `${m[1]}-${m[2].length === 2 ? m[1].slice(0, 2) + m[2] : m[2]}`.slice(0, 9)
-    return fy.slice(0, 9)
-  }
+/** Fiscal year from the file/resource name ("...2024-2025...") or its URL ("24-25"). */
+function fiscalYear(name: string, url: string): string {
+  const full = name.match(/(\d{4})-(\d{4})/)
+  if (full) return `${full[1]}-${full[2]}`
+  const short = url.match(/(\d{2})-(\d{2})(?!\d)/)
+  if (short) return `20${short[1]}-20${short[2]}`
   return "unknown"
 }
 
-/** Load Comptes publics actuals, aggregate by ministry, and update the matching
- * budget rows (actual + variance) and the ministry's headline actual spending. */
-export async function ingestActuals(directUrl = DIRECT_URL, limit?: number): Promise<IngestResult> {
+/** Aggregate one actuals file to ministry spending totals, then update the
+ * matching budget rows (actual + variance) and the ministry's actual spending. */
+async function processFile(rows: Row[], fy: string, result: IngestResult, limit?: number) {
   const db = getDb()
-  const { rows, sourceUrl } = await loadRows({ directUrl, datasetId: DATASET, prefer: PREFER })
-  const result: IngestResult = { source: "Comptes publics", url: sourceUrl, rows: rows.length, upserted: 0, skipped: 0, errors: 0 }
-  if (!rows.length) return result
-  await preloadCaches()
-
+  if (!rows.length) return
   const columns = Object.keys(rows[0])
   const actualKey = findActualKey(columns)
   const ministryKey = MINISTRY_KEYS.find((k) => columns.includes(k))
-  if (!actualKey || !ministryKey) {
-    throw new Error(`Actuals columns not recognized. ministryKey=${ministryKey} actualKey=${actualKey}. columns=${columns.join(",")}`)
-  }
-  const fy = fiscalYear(actualKey, rows[0])
+  if (!actualKey || !ministryKey) return
 
   const totals = new Map<string, number>()
   const slice = limit ? rows.slice(0, limit) : rows
   for (const row of slice) {
+    // Compare like-for-like with "budget de dépenses": expenditures only.
+    const repartition = row["repartition"]
+    if (repartition && !/d[eé]pens/i.test(repartition)) continue
     const name = row[ministryKey]?.trim()
     const amt = Number(money(row[actualKey]) ?? "")
     if (!name || !Number.isFinite(amt)) {
@@ -72,7 +65,6 @@ export async function ingestActuals(directUrl = DIRECT_URL, limit?: number): Pro
     try {
       const ministryId = await getOrCreateMinistry(name)
       const actualStr = actual.toFixed(2)
-
       const existing = await db
         .select({ id: budgets.id, planned: budgets.planned })
         .from(budgets)
@@ -90,13 +82,27 @@ export async function ingestActuals(directUrl = DIRECT_URL, limit?: number): Pro
       } else {
         await db.insert(budgets).values({ ministryId, fiscalYear: fy, planned: "0", actual: actualStr })
       }
-
       await db.update(ministries).set({ actualSpending: actualStr, updatedAt: new Date() }).where(eq(ministries.id, ministryId))
       result.upserted++
     } catch (err) {
       result.errors++
       if (result.errors <= 5) console.error("actuals ministry error:", (err as Error).message)
     }
+  }
+}
+
+/** Load every yearly actuals file and reconcile it against the budgets table. */
+export async function ingestActuals(directUrl = DIRECT_URL, limit?: number): Promise<IngestResult> {
+  await preloadCaches()
+  const result: IngestResult = { source: "Comptes publics", url: directUrl ?? DATASET, rows: 0, upserted: 0, skipped: 0, errors: 0 }
+
+  const files = directUrl
+    ? [{ url: directUrl, name: directUrl, rows: await fetchCsv(directUrl) }]
+    : await loadCsvResources(DATASET, NAME)
+
+  for (const file of files) {
+    result.rows += file.rows.length
+    await processFile(file.rows, fiscalYear(file.name, file.url), result, limit)
   }
   return result
 }
