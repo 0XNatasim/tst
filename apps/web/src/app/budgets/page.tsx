@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface BudgetItem {
   id: string
   ministryId: string
+  ministryName: string | null
   fiscalYear: string
   planned: number
   actual: number
@@ -15,6 +16,10 @@ interface BudgetItem {
 
 function formatCAD(n: number): string {
   return new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(n)
+}
+
+function shortName(d: BudgetItem): string {
+  return d.ministryName ?? `Ministère ${d.ministryId?.slice(0, 8)}`
 }
 
 export default function BudgetsPage() {
@@ -28,10 +33,9 @@ export default function BudgetsPage() {
       .catch(() => {})
   }, [fiscalYear])
 
-  const chartData = data.map((d) => ({
-    name: d.ministryId?.slice(0, 8) ?? "N/A",
+  const chartData = data.slice(0, 12).map((d) => ({
+    name: shortName(d).replace(/^Ministère (de la |des |du |de l'|de |d')?/i, "").slice(0, 18),
     Prévu: Number(d.planned) / 1e9,
-    Réel: Number(d.actual) / 1e9,
   }))
 
   return (
@@ -82,7 +86,6 @@ export default function BudgetsPage() {
                 }}
               />
               <Bar dataKey="Prévu" fill="#2b4c7a" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="Réel" fill="#2d6a4f" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -91,26 +94,31 @@ export default function BudgetsPage() {
       <div className="mt-8 space-y-3">
         {data.map((d) => {
           const variance = Number(d.variance)
+          const hasActual = d.actual != null && Number(d.actual) > 0
           return (
             <div key={d.id} className="card-3d p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="font-serif text-base font-bold text-ink"
                     style={{ fontFamily: "var(--font-fraunces)" }}>
-                    Ministère {d.ministryId?.slice(0, 8)}
+                    {shortName(d)}
                   </p>
                   <p className="mt-0.5 font-mono text-[0.625rem] uppercase tracking-wider text-ink-faint">
                     {d.fiscalYear}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="ink-label">Prévu</p>
+                  <p className="ink-label">Budget de dépenses</p>
                   <p className="ink-value text-sm">{formatCAD(Number(d.planned))}</p>
-                  <p className="ink-label mt-1">Réel</p>
-                  <p className="ink-value text-sm">{formatCAD(Number(d.actual))}</p>
-                  <p className={`ink-value mt-1 text-sm ${variance > 0 ? "text-accent" : "text-pine"}`}>
-                    {variance > 0 ? "+" : ""}{formatCAD(variance)}
-                  </p>
+                  {hasActual && (
+                    <>
+                      <p className="ink-label mt-1">Réel</p>
+                      <p className="ink-value text-sm">{formatCAD(Number(d.actual))}</p>
+                      <p className={`ink-value mt-1 text-sm ${variance > 0 ? "text-accent" : "text-pine"}`}>
+                        {variance > 0 ? "+" : ""}{formatCAD(variance)}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
